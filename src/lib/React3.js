@@ -20,6 +20,7 @@ class React3 extends React.Component {
     sortObjects: PropTypes.bool,
     mainCamera: PropTypes.string,
     createRenderer: PropTypes.func,
+    renderOnlyRenderer: PropTypes.bool,
     onAnimate: PropTypes.func,
     clearColor: PropTypes.oneOfType([
       propTypeInstanceOf(THREE.Color),
@@ -48,6 +49,7 @@ class React3 extends React.Component {
 
   static defaultProps = {
     context: '3d',
+    renderOnlyRenderer: false,
   };
 
   static findTHREEObject = React3Renderer.findTHREEObject;

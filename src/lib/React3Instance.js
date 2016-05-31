@@ -335,8 +335,10 @@ class React3DInstance {
 
     if (mainCamera) {
       if (this._lastRenderMode !== 'camera') {
-        this._renderer.autoClear = true;
-        this._renderer.setViewport(0, 0, this._parameters.width, this._parameters.height);
+        if (!this._parameters.renderOnlyRenderer) {
+          this._renderer.autoClear = true;
+          this._renderer.setViewport(0, 0, this._parameters.width, this._parameters.height);
+        }
         this._lastRenderMode = 'camera';
       }
       CameraUtils.current = mainCamera;
@@ -345,11 +347,15 @@ class React3DInstance {
       CameraUtils.current = null;
     } else if (this._viewports.length > 0) {
       if (this._lastRenderMode !== 'viewport') {
-        this._renderer.autoClear = false;
+        if (!this._parameters.renderOnlyRenderer) {
+          this._renderer.autoClear = false;
+        }
         this._lastRenderMode = 'viewport';
       }
 
-      this._renderer.clear();
+      if (!this._parameters.renderOnlyRenderer) {
+        this._renderer.clear();
+      }
       this._viewports.forEach(viewport => {
         let viewportCamera = null;
 
@@ -376,8 +382,9 @@ class React3DInstance {
         if (viewport.onBeforeRender) {
           ReactUpdates.batchedUpdates(viewport.onBeforeRender);
         }
-
-        this._renderer.setViewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        if (!this._parameters.renderOnlyRenderer) {
+          this._renderer.setViewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        }
         CameraUtils.current = viewportCamera;
         this.userData.events.emit('preRender');
         this._renderScene(viewportCamera);
@@ -420,10 +427,14 @@ class React3DInstance {
           highlightCube.scale.copy(size);
         }
 
-        const autoClear = this._renderer.autoClear;
-        this._renderer.autoClear = false;
+        if (!this._parameters.renderOnlyRenderer) {
+          const autoClear = this._renderer.autoClear;
+          this._renderer.autoClear = false;
+        }
         this._renderer.render(highlightScene, camera);
-        this._renderer.autoClear = autoClear;
+        if (!this._parameters.renderOnlyRenderer) {
+          this._renderer.autoClear = autoClear;
+        }
       }
     }
   }
@@ -484,7 +495,7 @@ class React3DInstance {
 
   updateWidth(newWidth) {
     this._parameters.width = newWidth;
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -527,7 +538,7 @@ class React3DInstance {
 
   updateHeight(newHeight) {
     this._parameters.height = newHeight;
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -536,7 +547,7 @@ class React3DInstance {
 
   updatePixelRatio(newPixelRatio) {
     this._parameters.pixelRatio = newPixelRatio;
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -548,7 +559,7 @@ class React3DInstance {
   updateSortObjects(sortObjects) {
     this._parameters.sortObjects = sortObjects;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -632,7 +643,7 @@ class React3DInstance {
   updateShadowMapEnabled(shadowMapEnabled) {
     this._parameters.shadowMapEnabled = shadowMapEnabled;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -643,7 +654,7 @@ class React3DInstance {
   updateShadowMapType(shadowMapType) {
     this._parameters.shadowMapType = shadowMapType;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -654,7 +665,7 @@ class React3DInstance {
   updateShadowMapCullFace(shadowMapCullFace) {
     this._parameters.shadowMapCullFace = shadowMapCullFace;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -665,7 +676,7 @@ class React3DInstance {
   updateShadowMapDebug(shadowMapDebug) {
     this._parameters.shadowMapDebug = shadowMapDebug;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -698,7 +709,7 @@ class React3DInstance {
   updateGammaInput(gammaInput) {
     this._parameters.gammaInput = gammaInput;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -709,7 +720,7 @@ class React3DInstance {
   updateGammaOutput(gammaOutput) {
     this._parameters.gammaOutput = gammaOutput;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -742,7 +753,7 @@ class React3DInstance {
   updateClearColor(clearColor) {
     this._parameters.clearColor = clearColor;
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -762,7 +773,7 @@ class React3DInstance {
       parameters.clearAlpha = clearAlpha;
     }
 
-    if (!this._renderer) {
+    if (!this._renderer || this._parameters.renderOnlyRenderer) {
       return;
     }
 
@@ -784,7 +795,7 @@ class React3DInstance {
   refreshRenderer() {
     this.disposeResourcesAndRenderer();
 
-    const contextLossExtension = this._renderer.extensions.get('WEBGL_lose_context');
+    const contextLossExtension = !this._parameters.renderOnlyRenderer && this._renderer.extensions.get('WEBGL_lose_context');
 
     delete this._renderer;
     if (this._rendererUpdatedCallback) {
@@ -828,7 +839,9 @@ class React3DInstance {
       texture.dispose();
     }
 
-    this._renderer.dispose();
+    if (!this._parameters.renderOnlyRenderer) {
+      this._renderer.dispose();
+    }
   }
 
   willUnmount() {
@@ -848,7 +861,7 @@ class React3DInstance {
     delete this._rendererInstance;
 
     if (this._renderer) {
-      const contextLossExtension = this._renderer.extensions.get('WEBGL_lose_context');
+      const contextLossExtension = !this._parameters.renderOnlyRenderer && this._renderer.extensions.get('WEBGL_lose_context');
 
       if (contextLossExtension) {
         // noinspection JSUnresolvedFunction
